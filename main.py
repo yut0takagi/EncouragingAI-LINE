@@ -7,7 +7,8 @@ import datetime
 from firebase_admin import firestore
 
 from linebot.v3.messaging import MessagingApi, Configuration, ApiClient, TextMessage
-from linebot.v3.webhook import WebhookHandler, MessageEvent, TextMessageContent
+from linebot.v3.webhook import WebhookHandler, MessageEvent
+from linebot.v3.webhooks import TextMessageContent
 from linebot.v3.messaging.models.reply_message_request import ReplyMessageRequest
 from linebot.v3.exceptions import InvalidSignatureError
 from dotenv import load_dotenv
