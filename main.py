@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, abort
 from dotenv import load_dotenv
 import openai
+from openai import OpenAI
 import base64
 import datetime
 from firebase_admin import firestore
@@ -93,9 +94,10 @@ def handle_message(event):
         chat_history.append({"role": "user", "content": user_msg})
 
         # 🧠 OpenAIで共感応答を生成
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         system_prompt = "あなたは感情に寄り添う優しいカウンセラーです。ユーザーの話に共感し、安心させるような返答をしてください。"
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
