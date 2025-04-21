@@ -7,7 +7,7 @@ import datetime
 from firebase_admin import firestore
 
 from linebot.v3.messaging import MessagingApi, Configuration, ApiClient, TextMessage
-from linebot.v3.webhook import WebhookHandler, MessageEvent
+from linebot.v3.webhook import WebhookHandler, MessageEvent, TextMessageContent
 from linebot.v3.messaging.models.reply_message_request import ReplyMessageRequest
 from linebot.v3.exceptions import InvalidSignatureError
 from dotenv import load_dotenv
@@ -74,7 +74,7 @@ def callback():
         abort(400)
     return "OK"
 
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_id = event.source.user_id
     user_msg = event.message.text
@@ -108,14 +108,12 @@ def handle_message(event):
         print(f"[GPT] reply: {reply_text}")
     except Exception as e:
         print(f"[ERROR] {e}")
-        reply_text = "申し訳ありません。もう一度お答えできません。"
-    finally:
-        # 💬 LINEへ応答（v3スタイル）
-        configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
-        with ApiClient(configuration) as api_client:
-            messaging_api = MessagingApi(api_client)
-            messaging_api.reply_message(
-                ReplyMessageRequest(
+        reply_text = "申し訳ありません。お答えできません。"
+    configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
+    with ApiClient(configuration) as api_client:
+        messaging_api = MessagingApi(api_client)
+        messaging_api.reply_message(
+            ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=reply_text)]
             )
