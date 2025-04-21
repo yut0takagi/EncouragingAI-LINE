@@ -103,6 +103,8 @@ def handle_message(event):
 
     # 💬 LINEへ応答（v3スタイル）
     configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
+    print(f"[LINE] from {user_id}: {user_msg}")
+    print(f"[GPT] reply: {reply_text}")
     with ApiClient(configuration) as api_client:
         messaging_api = MessagingApi(api_client)
         messaging_api.reply_message(
