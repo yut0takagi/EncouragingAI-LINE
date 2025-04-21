@@ -1,0 +1,6 @@
+.vscode
+Pipfile
+.env
+/config/*
+encouragingai-line-firebase-adminsdk-fbsvc-84e175041f.json
+*.json
