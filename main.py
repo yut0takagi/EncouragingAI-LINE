@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, abort
 from dotenv import load_dotenv
 import openai
-
+import base64
 import datetime
 from firebase_admin import firestore
 
