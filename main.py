@@ -6,19 +6,22 @@ import base64
 import datetime
 from firebase_admin import firestore
 
-from linebot import LineBotApi, WebhookHandler
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from linebot.exceptions import InvalidSignatureError
+from linebot.v3.messaging import MessagingApi, Configuration, ApiClient, TextMessage
+from linebot.v3.webhook import WebhookHandler, MessageEvent
+from linebot.v3.models import ReplyMessageRequest
+from linebot.v3.exceptions import InvalidSignatureError
+from dotenv import load_dotenv
+import os
 
 # .env読み込み
 load_dotenv()
 app = Flask(__name__)
 
 # 各種APIキー
-line_bot_api = LineBotApi(os.getenv("LINE_ACCESS_TOKEN"))
+configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
+api_client = ApiClient(configuration)
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
 
 ##################################################################################################
 
@@ -76,17 +79,16 @@ def handle_message(event):
     user_id = event.source.user_id
     user_msg = event.message.text
 
-    # 過去の履歴読み込み
+    # 🔁 過去の履歴を取得
     history = load_recent_memory(user_id)
     chat_history = []
     for q, a in history:
         chat_history.append({"role": "user", "content": q})
         chat_history.append({"role": "assistant", "content": a})
 
-    # 今回のユーザーメッセージ
     chat_history.append({"role": "user", "content": user_msg})
 
-    # OpenAIで応答生成（共感的に）
+    # 🧠 OpenAIで共感応答を生成
     system_prompt = "あなたは感情に寄り添う優しいカウンセラーです。ユーザーの話に共感し、安心させるような返答をしてください。"
 
     response = openai.ChatCompletion.create(
@@ -99,13 +101,18 @@ def handle_message(event):
 
     reply_text = response.choices[0].message.content.strip()
 
-    # 応答を送信
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=reply_text)
-    )
+    # 💬 LINEへ応答（v3スタイル）
+    configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
+    with ApiClient(configuration) as api_client:
+        messaging_api = MessagingApi(api_client)
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=reply_text)]
+            )
+        )
 
-    # Firestoreに保存
+    # 📝 Firestoreに保存
     save_memory(user_id, user_msg, reply_text)
 
 if __name__ == "__main__":
