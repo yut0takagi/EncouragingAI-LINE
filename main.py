@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 import openai
 
 import datetime
-import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
 
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
@@ -22,9 +21,23 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 ##################################################################################################
-if not firebase_admin._apps:
-    cred = credentials.Certificate(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
-    firebase_admin.initialize_app(cred)
+
+def restore_firebase_config():
+    config_b64 = os.getenv("FIREBASE_CONFIG_B64")
+    if config_b64:
+        decoded = base64.b64decode(config_b64)
+        with open("firebase_config.json", "wb") as f:
+            f.write(decoded)
+
+restore_firebase_config()
+
+# その後 firebase_admin で初期化
+import firebase_admin
+from firebase_admin import credentials
+
+cred = credentials.Certificate("firebase_config.json")
+firebase_admin.initialize_app(cred)
+
 
 db = firestore.client()
 
