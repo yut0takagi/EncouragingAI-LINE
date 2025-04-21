@@ -78,44 +78,48 @@ def callback():
 def handle_message(event):
     user_id = event.source.user_id
     user_msg = event.message.text
+    try:
+        # 🔁 過去の履歴を取得
+        history = load_recent_memory(user_id)
+        chat_history = []
+        for q, a in history:
+            chat_history.append({"role": "user", "content": q})
+            chat_history.append({"role": "assistant", "content": a})
 
-    # 🔁 過去の履歴を取得
-    history = load_recent_memory(user_id)
-    chat_history = []
-    for q, a in history:
-        chat_history.append({"role": "user", "content": q})
-        chat_history.append({"role": "assistant", "content": a})
+        chat_history.append({"role": "user", "content": user_msg})
 
-    chat_history.append({"role": "user", "content": user_msg})
+        # 🧠 OpenAIで共感応答を生成
+        system_prompt = "あなたは感情に寄り添う優しいカウンセラーです。ユーザーの話に共感し、安心させるような返答をしてください。"
 
-    # 🧠 OpenAIで共感応答を生成
-    system_prompt = "あなたは感情に寄り添う優しいカウンセラーです。ユーザーの話に共感し、安心させるような返答をしてください。"
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                *chat_history
+            ]
+        )
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            *chat_history
-        ]
-    )
+        reply_text = response.choices[0].message.content.strip()
 
-    reply_text = response.choices[0].message.content.strip()
+        # 📝 Firestoreに保存
+        save_memory(user_id, user_msg, reply_text)
 
-    # 💬 LINEへ応答（v3スタイル）
-    configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
-    print(f"[LINE] from {user_id}: {user_msg}")
-    print(f"[GPT] reply: {reply_text}")
-    with ApiClient(configuration) as api_client:
-        messaging_api = MessagingApi(api_client)
-        messaging_api.reply_message(
-            ReplyMessageRequest(
+        print(f"[LINE] from {user_id}: {user_msg}")
+        print(f"[GPT] reply: {reply_text}")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        reply_text = "申し訳ありません。もう一度お答えできません。"
+    finally:
+        # 💬 LINEへ応答（v3スタイル）
+        configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
+        with ApiClient(configuration) as api_client:
+            messaging_api = MessagingApi(api_client)
+            messaging_api.reply_message(
+                ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=reply_text)]
             )
         )
-
-    # 📝 Firestoreに保存
-    save_memory(user_id, user_msg, reply_text)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
