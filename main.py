@@ -74,8 +74,11 @@ def callback():
         abort(400)
     return "OK"
 
-@handler.add(MessageEvent, message=TextMessageContent)
+@handler.add(MessageEvent)
 def handle_message(event):
+    if not isinstance(event.message, TextMessageContent):
+        return
+
     user_id = event.source.user_id
     user_msg = event.message.text
     try:
@@ -109,6 +112,8 @@ def handle_message(event):
     except Exception as e:
         print(f"[ERROR] {e}")
         reply_text = "申し訳ありません。お答えできません。"
+
+    # 💬 LINEへ応答（v3スタイル）
     configuration = Configuration(access_token=os.getenv("LINE_ACCESS_TOKEN"))
     with ApiClient(configuration) as api_client:
         messaging_api = MessagingApi(api_client)
